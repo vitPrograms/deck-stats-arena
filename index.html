@@ -29,56 +29,69 @@
         overflow: hidden;
         display: flex;
         flex-direction: column;
-        justify-content: space-between;
       }
-      .hero-name {
-        position: absolute;
-        top: 10px;
-        left: 10px;
-        font-size: 38px;
+      .arena-title {
+        font-size: 32px;
         font-weight: bold;
         text-shadow: 2px 2px 2px black;
+        padding: 10px 0;
       }
-      /* Мінімалістичний блок для історії сесій */
       .session-history {
+        flex-grow: 1;
         padding: 10px;
         background: rgba(0, 0, 0, 0.8);
         border-radius: 0 0 10px 10px;
-        flex-grow: 1;
-        font-size: 16px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
+        overflow-y: auto;
       }
-      .session {
-        margin: 2px 0;
-        padding: 5px;
+      .session-block {
+        margin: 5px 0;
+        padding: 10px;
+        background: rgba(44, 44, 44, 0.9);
+        border: 1px solid #555;
+        border-radius: 5px;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        transition: transform 0.2s;
       }
-      .session-name {
+      .session-block:hover {
+        transform: scale(1.02);
+      }
+      .session-time {
         flex: 1;
         text-align: left;
         font-weight: bold;
       }
-      .session-stats {
-        flex: 1;
-        text-align: center;
+      .session-matches {
+        flex: 2;
+        display: flex;
+        gap: 2px;
+        justify-content: center;
       }
-      .session-progress {
+      .session-result {
         flex: 1;
         text-align: right;
+        font-weight: bold;
+      }
+      .match {
+        width: 15px;
+        height: 15px;
+        border-radius: 3px;
+      }
+      .win {
+        background: var(--win-color);
+        box-shadow: inset 0px 0px 5px 2px var(--win-secondary);
+      }
+      .lose {
+        background: var(--lose-color);
+        box-shadow: inset 0px 0px 5px 2px var(--lose-secondary);
       }
       .win-count {
         color: var(--win-color);
-        font-weight: bold;
       }
       .lose-count {
         color: var(--lose-color);
-        font-weight: bold;
       }
-      /* Ефекти */
       #crown {
         position: absolute;
         top: -50px;
@@ -116,9 +129,8 @@
         class="main"
         style="background-image: url('https://example.com/default.jpg')"
       >
-        <span class="hero-name"></span>
+        <div class="arena-title">Arena</div>
         <div class="session-history" id="session-history"></div>
-        <!-- Елементи для ефектів -->
         <span id="crown">👑</span>
         <div id="crack"></div>
       </div>
@@ -177,7 +189,7 @@
           Druid:
             "https://blz-contentstack-images.akamaized.net/v3/assets/bltc965041283bac56c/blt810ba2b34c90b740/5e501a45297b4d1b5ff02394/druid.jpg",
           "Demon Hunter":
-            "https://blz-contentstack-images.akamaized.net/v3/assets/bltc965041283bac56c/blt881c2890e465706d/5e5fe3d58902221b laminate5e1dd5ea/dh.jpg",
+            "https://blz-contentstack-images.akamaized.net/v3/assets/bltc965041283bac56c/blt881c2890e465706d/5e5fe3d58902221b5e1dd5ea/dh.jpg",
           Default:
             "https://i.pinimg.com/736x/80/a5/9d/80a59d687a0b0794efa2bcf62f7110ae.jpg",
         };
@@ -239,9 +251,24 @@
         setTimeout(() => crack.classList.remove("active"), 1000);
       }
 
+      function formatSessionTime(timestamp) {
+        const date = new Date(parseInt(timestamp));
+        return date.toLocaleTimeString('uk-UA', {
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+
       function updateStats() {
+        console.log("Attempting to fetch stats at", new Date().toISOString());
         fetch("https://a492dbc2-6a6b-4b24-8e44-c455b19fd2e0-00-14467aguvcr35.worf.replit.dev/stats")
-          .then((response) => response.json())
+          .then((response) => {
+            console.log("Fetch response received:", response.status);
+            if (!response.ok) {
+              throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+          })
           .then((data) => {
             const current = data.decks[data.currentDeck] || {
               wins: 0,
@@ -251,7 +278,6 @@
             };
 
             document.querySelector(".main").style.backgroundImage = `url('${getHeroImage(data.currentDeckFullName)}')`;
-            document.querySelector(".hero-name").innerText = data.currentDeckFullName;
 
             if (data.currentDeck !== prevDeck) {
               prevWins = current.wins;
@@ -264,39 +290,43 @@
               prevLosses = current.losses;
             }
 
-            // Оновлення історії сесій
             const sessionHistoryDiv = document.getElementById("session-history");
             sessionHistoryDiv.innerHTML = "";
             const sessions = Object.entries(data.decks)
-              .map(([deckName, stats]) => ({
-                deckName,
+              .map(([sessionId, stats]) => ({
+                sessionId,
+                deckName: stats.deckName,
                 wins: stats.wins,
                 losses: stats.losses,
                 history: stats.history || [],
-                fullName: stats.fullName || deckName
+                fullName: stats.fullName || stats.deckName
               }))
-              .sort((a, b) => b.wins - a.wins)
-              .slice(0, 3); // Останні 3 сесії
+              .sort((a, b) => parseInt(b.sessionId) - parseInt(a.sessionId))
+              .slice(0, 3);
 
             sessions.forEach((session) => {
               const sessionDiv = document.createElement("div");
-              sessionDiv.className = "session";
+              sessionDiv.className = "session-block";
               const progress = Math.min(session.wins, 5);
               const status = session.losses >= 2 ? " (Завершено)" : "";
               sessionDiv.innerHTML = `
-                <div class="session-name">${session.deckName}</div>
-                <div class="session-stats">
-                  <span class="win-count">${session.wins}</span> / 
-                  <span class="lose-count">${session.losses}</span>
+                <div class="session-time">${formatSessionTime(session.sessionId)}</div>
+                <div class="session-matches">
+                  ${session.history.slice(-5).map(result => `<div class="match ${result}"></div>`).join('')}
                 </div>
-                <div class="session-progress">${progress}/5${status}</div>
+                <div class="session-result">${session.wins}/${progress}${status}</div>
               `;
               sessionHistoryDiv.appendChild(sessionDiv);
             });
           })
-          .catch((error) => console.error("Error fetching stats:", error));
+          .catch((error) => {
+            console.error("Error fetching stats:", error.message);
+            const sessionHistoryDiv = document.getElementById("session-history");
+            sessionHistoryDiv.innerHTML = `<div style="color: #e75757; padding: 10px;">Помилка: Не вдалося завантажити статистику (${error.message})</div>`;
+          });
       }
 
+      console.log("Starting interval for updateStats");
       updateStats();
       setInterval(updateStats, 5000);
     </script>
