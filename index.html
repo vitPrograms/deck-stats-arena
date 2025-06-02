@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      :root {
+        --win-color: #79ea86;
+        --lose-color: #e75757;
+        --win-secondary: #2ee143;
+        --lose-secondary: #e12f2f;
+      }
+      body {
+        background: rgba(0, 0, 0, 0);
+        font-family: Arial, sans-serif;
+        color: white;
+        text-align: center;
+      }
+      #container {
+        width: 600px;
+        margin: 20px auto;
+        position: relative;
+      }
+      .main {
+        position: relative;
+        width: 100%;
+        height: 300px;
+        background-size: cover;
+        background-position: center;
+        border-radius: 10px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+      }
+      .hero-name {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        font-size: 38px;
+        font-weight: bold;
+        text-shadow: 2px 2px 2px black;
+      }
+      /* Мінімалістичний блок для історії сесій */
+      .session-history {
+        padding: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        border-radius: 0 0 10px 10px;
+        flex-grow: 1;
+        font-size: 16px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+      }
+      .session {
+        margin: 2px 0;
+        padding: 5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .session-name {
+        flex: 1;
+        text-align: left;
+        font-weight: bold;
+      }
+      .session-stats {
+        flex: 1;
+        text-align: center;
+      }
+      .session-progress {
+        flex: 1;
+        text-align: right;
+      }
+      .win-count {
+        color: var(--win-color);
+        font-weight: bold;
+      }
+      .lose-count {
+        color: var(--lose-color);
+        font-weight: bold;
+      }
+      /* Ефекти */
+      #crown {
+        position: absolute;
+        top: -50px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 125px;
+        color: gold;
+        opacity: 0;
+        transition: all 1s ease;
+      }
+      #crown.active {
+        top: 20px;
+        opacity: 1;
+      }
+      #crack {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url("https://img.freepik.com/premium-vector/earthquake-cracking-holes-ground-cracks-top-view-crushed-texture-black-background_136545-711.jpg")
+          no-repeat center;
+        background-size: cover;
+        opacity: 0;
+        transition: opacity 0.5s ease;
+      }
+      #crack.active {
+        opacity: 0.5;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+      <div
+        class="main"
+        style="background-image: url('https://example.com/default.jpg')"
+      >
+        <span class="hero-name"></span>
+        <div class="session-history" id="session-history"></div>
+        <!-- Елементи для ефектів -->
+        <span id="crown">👑</span>
+        <div id="crack"></div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+      function getHeroImage(deckName) {
+        const heroes = {
+          "Death Knight": [
+            "death knight",
+            "dk",
+            "дк",
+            "дек",
+            "deathknight",
+            "лицар смерті",
+            "ls",
+          ],
+          Warrior: ["warrior", "war", "вар", "воїн", "воїнка", "warr"],
+          Mage: ["mage", "mg", "маг", "мага", "мг"],
+          Rogue: ["rogue", "rog", "рога", "розбійник", "розб", "ro"],
+          Shaman: ["shaman", "sham", "шам", "шаман", "шм", "sh"],
+          Warlock: ["warlock", "wl", "варлок", "вл", "lock", "лок"],
+          Priest: ["priest", "pr", "пріст", "жрець", "жр"],
+          Paladin: ["paladin", "pal", "пал", "паладин", "пл", "pally", "палі"],
+          Hunter: ["hunter", "hunt", "хант", "мисливець", "мис", "hn"],
+          Druid: ["druid", "dru", "дру", "друїд", "друль"],
+          "Demon Hunter": [
+            "demon hunter",
+            "dh",
+            "дх",
+            "демон хантер",
+            "демон",
+            "dhunt",
+          ],
+          Default: [],
+        };
+
+        const images = {
+          "Death Knight": "https://i.redd.it/7wrdzdooldx91.png",
+          Warrior:
+            "https://blz-contentstack-images.akamaized.net/v3/assets/bltc965041283bac56c/blt5677de4c919e9430/5e4da44ca9f0fb732c24c397/warrior.jpg",
+          Mage: "https://blz-contentstack-images.akamaized.net/v3/assets/bltc965041283bac56c/bltfad439f31b38dad2/5e4da46f8286c81bdae7858c/mage.jpg",
+          Rogue:
+            "https://blz-contentstack-images.akamaized.net/v3/assets/bltc965041283bac56c/blt2fc4edc7ed836f8a/5e6008788286c81bdae78b9d/Rogue.jpg",
+          Shaman:
+            "https://blz-contentstack-images.akamaized.net/v3/assets/bltc965041283bac56c/bltd6694bd0e56ba114/5e4da3cba481381bd5d2e9d7/shaman.jpg",
+          Warlock:
+            "https://blz-contentstack-images.akamaized.net/v3/assets/bltc965041283bac56c/bltad0a2dc55b70fa29/5e4ee38e8d83401be1195eaa/warlock.jpg",
+          Priest:
+            "https://blz-contentstack-images.akamaized.net/v3/assets/bltc965041283bac56c/blt4ff23385f5f401ef/5e500e588dc1e51c53168a5a/priest.jpg",
+          Paladin:
+            "https://blz-contentstack-images.akamaized.net/v3/assets/bltc965041283bac56c/blt198019879a096f53/5e4ebd3a8dc1e51c531689a4/paladin.jpg",
+          Hunter:
+            "https://blz-contentstack-images.akamaized.net/v3/assets/bltc965041283bac56c/blt12bb0cfe0878742b/5e4da461a9f0fb732c24c39b/hunter.jpg",
+          Druid:
+            "https://blz-contentstack-images.akamaized.net/v3/assets/bltc965041283bac56c/blt810ba2b34c90b740/5e501a45297b4d1b5ff02394/druid.jpg",
+          "Demon Hunter":
+            "https://blz-contentstack-images.akamaized.net/v3/assets/bltc965041283bac56c/blt881c2890e465706d/5e5fe3d58902221b laminate5e1dd5ea/dh.jpg",
+          Default:
+            "https://i.pinimg.com/736x/80/a5/9d/80a59d687a0b0794efa2bcf62f7110ae.jpg",
+        };
+
+        const bracketMatch = deckName.match(/\[([^\]]+)\]/);
+        if (bracketMatch) {
+          const classInBrackets = bracketMatch[1].trim();
+          for (const hero of Object.keys(heroes)) {
+            if (classInBrackets.toLowerCase() === hero.toLowerCase()) {
+              return images[hero];
+            }
+          }
+        }
+
+        const cleanDeckName = deckName.replace(/\[([^\]]+)\]/, "").trim();
+        const words = cleanDeckName.toLowerCase().split(/\s+/);
+
+        let bestMatch = null;
+        let bestMatchLength = 0;
+
+        for (const [hero, aliases] of Object.entries(heroes)) {
+          for (const alias of aliases) {
+            if (words.includes(alias) && alias.length > bestMatchLength) {
+              bestMatch = hero;
+              bestMatchLength = alias.length;
+            }
+            if (
+              cleanDeckName.toLowerCase().includes(alias) &&
+              alias.length > bestMatchLength
+            ) {
+              bestMatch = hero;
+              bestMatchLength = alias.length;
+            }
+          }
+        }
+
+        return images[bestMatch || "Default"];
+      }
+
+      let prevWins = 0;
+      let prevLosses = 0;
+      let prevDeck = '';
+
+      function triggerWinEffect() {
+        confetti({
+          particleCount: 75,
+          spread: 75,
+          origin: { y: 0.6 },
+        });
+
+        const crown = document.getElementById("crown");
+        crown.classList.add("active");
+        setTimeout(() => crown.classList.remove("active"), 1000);
+      }
+
+      function triggerLoseEffect() {
+        const crack = document.getElementById("crack");
+        crack.classList.add("active");
+        setTimeout(() => crack.classList.remove("active"), 1000);
+      }
+
+      function updateStats() {
+        fetch("https://a492dbc2-6a6b-4b24-8e44-c455b19fd2e0-00-14467aguvcr35.worf.replit.dev/stats")
+          .then((response) => response.json())
+          .then((data) => {
+            const current = data.decks[data.currentDeck] || {
+              wins: 0,
+              losses: 0,
+              history: [],
+              fullName: data.currentDeckFullName
+            };
+
+            document.querySelector(".main").style.backgroundImage = `url('${getHeroImage(data.currentDeckFullName)}')`;
+            document.querySelector(".hero-name").innerText = data.currentDeckFullName;
+
+            if (data.currentDeck !== prevDeck) {
+              prevWins = current.wins;
+              prevLosses = current.losses;
+              prevDeck = data.currentDeck;
+            } else {
+              if (current.wins > prevWins) triggerWinEffect();
+              if (current.losses > prevLosses) triggerLoseEffect();
+              prevWins = current.wins;
+              prevLosses = current.losses;
+            }
+
+            // Оновлення історії сесій
+            const sessionHistoryDiv = document.getElementById("session-history");
+            sessionHistoryDiv.innerHTML = "";
+            const sessions = Object.entries(data.decks)
+              .map(([deckName, stats]) => ({
+                deckName,
+                wins: stats.wins,
+                losses: stats.losses,
+                history: stats.history || [],
+                fullName: stats.fullName || deckName
+              }))
+              .sort((a, b) => b.wins - a.wins)
+              .slice(0, 3); // Останні 3 сесії
+
+            sessions.forEach((session) => {
+              const sessionDiv = document.createElement("div");
+              sessionDiv.className = "session";
+              const progress = Math.min(session.wins, 5);
+              const status = session.losses >= 2 ? " (Завершено)" : "";
+              sessionDiv.innerHTML = `
+                <div class="session-name">${session.deckName}</div>
+                <div class="session-stats">
+                  <span class="win-count">${session.wins}</span> / 
+                  <span class="lose-count">${session.losses}</span>
+                </div>
+                <div class="session-progress">${progress}/5${status}</div>
+              `;
+              sessionHistoryDiv.appendChild(sessionDiv);
+            });
+          })
+          .catch((error) => console.error("Error fetching stats:", error));
+      }
+
+      updateStats();
+      setInterval(updateStats, 5000);
+    </script>
+  </body>
+</html>
