@@ -302,7 +302,7 @@
                 fullName: stats.fullName || stats.deckName
               }))
               .sort((a, b) => parseInt(b.sessionId) - parseInt(a.sessionId))
-              .slice(0, 3);
+              .slice(0, 5);
 
             sessions.forEach((session) => {
               const sessionDiv = document.createElement("div");
@@ -312,7 +312,7 @@
               sessionDiv.innerHTML = `
                 <div class="session-time">${formatSessionTime(session.sessionId)}</div>
                 <div class="session-matches">
-                  ${session.history.slice(-5).map(result => `<div class="match ${result}"></div>`).join('')}
+                  ${session.history.map(result => `<div class="match ${result}"></div>`).join('')}
                 </div>
                 <div class="session-result">${session.wins}/${progress}${status}</div>
               `;
